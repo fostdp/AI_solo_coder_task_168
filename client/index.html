@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数字孪生车间物流模拟 - KPI仪表盘</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>🏭 数字孪生车间物流模拟</h1>
+      <div class="header-controls">
+        <span id="connectionStatus" class="connection-status disconnected">○ 未连接</span>
+        <button id="startBtn" class="btn btn-primary">▶ 开始仿真</button>
+        <button id="stopBtn" class="btn btn-danger" disabled>⏹ 停止仿真</button>
+        <div class="speed-control">
+          <label>仿真速度:</label>
+          <input type="range" id="speedSlider" min="0.5" max="5" step="0.5" value="1">
+          <span id="speedValue">1x</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <aside class="sidebar">
+        <div class="panel">
+          <h3>📋 订单管理</h3>
+          <div class="order-form">
+            <div class="form-group">
+              <label>产品类型</label>
+              <select id="productType">
+                <option value="A">产品A (标准流程)</option>
+                <option value="B">产品B (冲压优先)</option>
+                <option value="C">产品C (多工位加工)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>数量</label>
+              <input type="number" id="orderQuantity" value="5" min="1" max="50">
+            </div>
+            <div class="form-group">
+              <label>优先级</label>
+              <select id="orderPriority">
+                <option value="1">低 (1)</option>
+                <option value="2">中 (2)</option>
+                <option value="3">高 (3)</option>
+              </select>
+            </div>
+            <button id="addOrderBtn" class="btn btn-success">+ 添加订单</button>
+          </div>
+          <div class="order-list" id="orderList"></div>
+        </div>
+
+        <div class="panel">
+          <h3>🚗 AGV 配置</h3>
+          <div class="form-group">
+            <label>AGV 数量</label>
+            <input type="range" id="agvCount" min="1" max="5" step="1" value="3">
+            <span id="agvCountValue">3</span>
+          </div>
+          <div class="agv-list" id="agvList"></div>
+        </div>
+
+        <div class="panel">
+          <h3>📊 实时状态</h3>
+          <div class="stats">
+            <div class="stat-item">
+              <span class="stat-label">仿真时间</span>
+              <span class="stat-value" id="simTime">0.0s</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">完成订单</span>
+              <span class="stat-value" id="completedOrders">0/0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">完成工件</span>
+              <span class="stat-value" id="completedJobs">0/0</span>
+            </div>
+            <div class="stat-item bottleneck">
+              <span class="stat-label">瓶颈工位</span>
+              <span class="stat-value" id="bottleneck">-</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">总等待时间</span>
+              <span class="stat-value" id="totalWaitTime">0.0s</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">冲突次数</span>
+              <span class="stat-value" id="totalCollisions">0</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-panel">
+        <div class="kpi-dashboard">
+          <div class="kpi-card">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-content">
+              <div class="kpi-label">完工时间</div>
+              <div class="kpi-value" id="kpiCompletionTime">-</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-content">
+              <div class="kpi-label">吞吐量</div>
+              <div class="kpi-value" id="kpiThroughput">-</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">🚗</div>
+            <div class="kpi-content">
+              <div class="kpi-label">AGV利用率</div>
+              <div class="kpi-value" id="kpiAgvUtilization">-</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">🔗</div>
+            <div class="kpi-content">
+              <div class="kpi-label">死锁解除</div>
+              <div class="kpi-value" id="kpiDeadlocks">-</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-content">
+              <div class="kpi-label">完成订单</div>
+              <div class="kpi-value" id="kpiOrdersCompleted">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-wrapper">
+          <div class="canvas-header">
+            <h3>🏭 车间布局实时监控</h3>
+            <label class="toggle-label">
+              <input type="checkbox" id="heatmapToggle" checked>
+              <span>物料热力图</span>
+            </label>
+          </div>
+          <div class="canvas-container">
+            <canvas id="workshopCanvas" width="900" height="450"></canvas>
+            <div class="legend">
+              <div class="legend-item"><span class="legend-color" style="background: #4CAF50"></span> 空闲</div>
+              <div class="legend-item"><span class="legend-color" style="background: #FF9800"></span> 加工中</div>
+              <div class="legend-item"><span class="legend-color" style="background: #2196F3"></span> AGV</div>
+              <div class="legend-item"><span class="legend-color" style="background: #F44336"></span> 瓶颈</div>
+              <div class="legend-item"><span class="legend-color" style="background: rgba(255, 100, 100, 0.5)"></span> 物料流动</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-panels">
+          <div class="panel utilization-panel">
+            <h3>📈 工位利用率</h3>
+            <div class="utilization-chart" id="utilizationChart"></div>
+          </div>
+
+          <div class="panel agv-status-panel">
+            <h3>🚗 AGV 实时状态</h3>
+            <div class="agv-status-grid">
+              <div class="agv-status-item">
+                <span class="agv-status-label">总数</span>
+                <span class="agv-status-value" id="agvTotal">0</span>
+              </div>
+              <div class="agv-status-item">
+                <span class="agv-status-label">空闲</span>
+                <span class="agv-status-value idle" id="agvIdle">0</span>
+              </div>
+              <div class="agv-status-item">
+                <span class="agv-status-label">移动</span>
+                <span class="agv-status-value moving" id="agvMoving">0</span>
+              </div>
+              <div class="agv-status-item">
+                <span class="agv-status-label">等待</span>
+                <span class="agv-status-value waiting" id="agvWaiting">0</span>
+              </div>
+              <div class="agv-status-item">
+                <span class="agv-status-label">平均利用率</span>
+                <span class="agv-status-value" id="agvAvgUtil">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel bottleneck-panel">
+            <h3>⚠️ 瓶颈分析与建议</h3>
+            <div class="bottleneck-analysis" id="bottleneckAnalysis">
+              <div style="color: #888; padding: 10px;">暂无瓶颈分析数据</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
